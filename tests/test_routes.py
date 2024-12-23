@@ -28,6 +28,7 @@ import os
 import logging
 from decimal import Decimal
 from unittest import TestCase
+from urllib.parse import quote_plus
 from service import app
 from service.common import status
 from service.models import db, init_db, Product
@@ -211,6 +212,56 @@ class TestProductRoutes(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         new_product_count = self.get_product_count()
         self.assertEqual(product_count - 1, new_product_count)
+
+    def test_query_by_name(self):
+        """ it should get products by name """
+        products = self._create_products(5)
+        target_name = products[0].name
+        name_count = len([product for product in products if product.name == target_name])
+        response = self.client.get(
+            BASE_URL, query_string=f"name={quote_plus(target_name)}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), name_count)
+        for product in data:
+            self.assertEqual(product["name"], target_name)
+
+    def test_query_by_category(self):
+        """ it should get products by category """
+        products = self._create_products(5)
+        target_category = products[0].category
+        category_count = len([
+            product for product in products 
+            if product.category == target_category
+            ]
+        )
+        response = self.client.get(
+            BASE_URL, query_string=f"category={target_category.name}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), category_count)
+        for product in data:
+            self.assertEqual(product["category"], target_category.name)
+
+    def test_query_by_availability(self):
+        """ it should get products by availability """
+        products = self._create_products(10)
+        target_availability = products[0].available
+        availability_count = len([
+            product for product in products
+            if product.available is target_availability
+            ]
+        )
+        response = self.client.get(
+            BASE_URL, query_string=f"available={target_availability}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), availability_count)
+        for product in data:
+            self.assertEqual(product["available"], target_availability)
 
     ######################################################################
     # Utility functions
